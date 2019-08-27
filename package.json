@@ -1,0 +1,27 @@
+{
+  "name": "LIRI-node-app",
+  "version": "1.0.0",
+  "description": "### Briefing:",
+  "main": "liri.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jim-n-cronic/LIRI-node-app.git"
+  },
+  "keywords": [],
+  "author": "olleppaSemaj",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jim-n-cronic/LIRI-node-app/issues"
+  },
+  "homepage": "https://github.com/jim-n-cronic/LIRI-node-app#readme",
+  "dependencies": {
+    "axios": "^0.19.0",
+    "dotenv": "^8.1.0",
+    "moment": "^2.24.0",
+    "node-spotify-api": "^1.1.1",
+    "omdb": "^0.8.0"
+  }
+}
