@@ -7,7 +7,15 @@ var fs = require('fs');
 var axios = require('axios');
 var time = require('moment'); 
 var Spotify = require('node-spotify-api');
-    var sptfy = new Spotify(keys.spotify);
+    var sptfy = new Spotify(keys.exports.spotify);
+  /*
+   var sptfy = new Spotify({
+    id: process.env.SPOTIFY_ID,
+    //id: "2d1be210b07b4fbba9a7d2659834aa3f",
+    secret: process.env.SPOTIFY_SECRET
+    //secret: "c45445784fb940b5b5fa529d38d400"
+   })
+   */
 //var omdb = require('omdb');
 //------------------------//
 // define var to grab all cmdLine args
