@@ -1,156 +1,187 @@
-// dotenv 
-require('dotenv').config();
-// keys
-var keys = require('./keys'); 
-// define variables for required packages
-var fs = require('fs');
-var axios = require('axios');
-var time = require('moment'); 
-var Spotify = require('node-spotify-api');
-    var sptfy = new Spotify(keys.exports.spotify);
-  /*
-   var sptfy = new Spotify({
-    id: process.env.SPOTIFY_ID,
-    //id: "2d1be210b07b4fbba9a7d2659834aa3f",
-    secret: process.env.SPOTIFY_SECRET
-    //secret: "c45445784fb940b5b5fa529d38d400"
-   })
-   */
-//var omdb = require('omdb');
-//------------------------//
-// define var to grab all cmdLine args
-var liriCMD = process.argv[2];
-var searchCMD = process.argv.splice(3).join(" ");
-// switch statement to execute the app in command line
+//Importing all necessarry packages and files
+require("dotenv").config();
+var keys = require("./keys.js");
+require("node-spotify-api");
+var axios = require("axios");
+var moment = require("moment");
+var Spotify = require("node-spotify-api");
+var fs = require("fs");
+var spotify = new Spotify(keys.spotify);
+var inquire = require('inquirer');
+var args = process.argv; 
+//the action that will be performed
+var action = args[2];
+//the term to use for the action 
+var term = args.splice(3).join("%20");
+//the liiRun function is called near the bottom. The act parameter will be used to determine which command to perform, while the query will be 
+//used as a paramater for that action
+var liriRun = function(act, query){
+    switch (act){
+        case "concert-this": 
+            console.log("calling concert-this for " + query.replace(/%20/g, " "));
+            var URL = "https://rest.bandsintown.com/artists/" + query + "/events?app_id=codingbootcamp";
+            console.log(URL);
+            //axios call to bands in town api with the user's CL query
+            axios.get(URL).then(
+                function(response){
+                    fs.appendFile("log.txt", ("concert-this\n"), function(err){
+                        if (err){
+                            throw err;
+                        }
+                    });
+                    //for each concert object
+                    response.data.forEach(function(concert){
+                        //from moment docs to convert date format
+                        var date = moment(concert.datetime, moment.ISO_8601).format("MM/DD/YYYY");
 
-function liriGO(liriCMD, searchCMD) {
-    switch (liriCMD) {
+                        var concertInfo = "Venue: " + concert.venue.name + " Location: " + concert.venue.city + ", " + concert.venue.region +
+                        " Date: " + date;
+
+                        console.log(concertInfo);
+                        console.log("-------------------------");
+                        
+                        fs.appendFile("log.txt", (concertInfo + "\n------\n"), function(err){
+                            if (err){
+                                throw err;
+                            }
+                        });
+                    })
+                    fs.appendFile("log.txt", ("----------------------\n"), function(err){
+                        if (err){
+                            throw err;
+                        }
+                        console.log("Concert search added to log.txt!");
+                    });
+            });
+            break;
         case "spotify-this-song":
-            spotME(searchCMD);
+            //default query if the user did not provide one
+            if(query === ""){
+                query = "The%20Sign";
+            }
+
+            console.log("searching spotify for " + query.replace(/%20/g, " "));
+            //searching the spotify databased with the provided query
+            spotify.search({ type: 'track', query: query }, function(err, data) {
+                if (err) {
+                  return console.log('Error occurred: ' + err);
+                }
+               
+                var songInfo =
+                    "Artist(s): " + data.tracks.items[0].artists[0].name +
+                    "\nTitle: " + data.tracks.items[0].name +
+                    "\nLink: " + data.tracks.items[0].preview_url + 
+                    "\nAlbum: " + data.tracks.items[0].album.name;
+
+                console.log(songInfo);
+
+                fs.appendFile("log.txt", ("spotify-this-song\n" + songInfo + "\n----------------------\n"), function(err){
+                    if (err){
+                        throw err;
+                    }
+                    console.log("Song search added to log.txt!");
+                });
+            });
             break;
-        case "concert-this":
-            getVenues(searchCMD);
-            break;
-        
         case "movie-this":
-            getFlix(searchCMD);
+            //default query if the user doesn't provide one
+            if(query === ""){
+                query = "Mr.%20Nobody";
+            } 
+
+            console.log("movie-this searching for " + query.replace(/%20/g, " "));
+
+            var URL = `http://www.omdbapi.com/?t=${query}&y=&plot=short&apikey=trilogy`;
+            //calling the OMDB api with the provided query 
+            axios.get(URL).then(
+                function(response) {
+                    var movieInfo = 
+                        "Title: " + response.data.Title + 
+                        "\nReleased: " + response.data.Released + 
+                        "\nIMDB Rating: " + response.data.imdbRating + 
+                        "\nRotten Tomatoes: " + response.data.Ratings[1].Value +
+                        "\nCountry: " + response.data.Country +
+                        "\nLanguage: " + response.data.Language + 
+                        "\nPlot: " + response.data.Plot + 
+                        "\nActors: " + response.data.Actors;
+
+                    console.log(movieInfo)
+
+                    fs.appendFile("log.txt", ("movie-this\n" +movieInfo + "\n----------------------\n"), function(err){
+                        if (err){
+                            throw err;
+                        }
+                        console.log("Movie search added to log.txt!");
+                    });
+                }
+                
+            );
             break;
+            
         case "do-what-it-says":
-            getRandom();
+                //reads in the text from random.txt and calls liriRun() with the arguments it provides
+                fs.readFile("random.txt", 'utf8', function(err, data){
+                    console.log(data);
+                    if (err){
+                        console.log(err);
+                        return;
+                    } 
+                    //The string is split into and array of two items at the comma
+                    var actionTerm = data.split(",")
+                    //the first argument for the command to be executed
+                    var action = actionTerm[0];
+                    //the second argument for the term to execute the command with
+                    var term = actionTerm[1];
+                    
+                    liriRun(action, term);
+                  
+                });
+                ;
             break;
-            // 
+            
         default: 
-            console.log("Please enter one of the following commands:\nconcert-this\nspotify-this-song\nmove-this\ndo-what-it-says");            
+            console.log("Invalid action argument!");
     }
-};
 
-// SPOTIFY-THIS-SONG
-function spotME(trkName) {
-    // export point for keys to spotify **
-    if (!trkName) {
-        trkName = "The Sign";
-    }
-    sptfy.search({ type: 'track', query: trkName}, function (err, data) {
-        if (err) {
-            return console.log("Error: "+err);
-        }
-        var look = data.tracks.items[0];
-        var artsNme = look.album.artist[0].name;
-        var song = look.name;
-        var trkPreView = look.href;
-        var trkBalbum = look.album.name
-        //------\cLog/----------//
-        console.log("Artist(s) Name: "+artsNme+"\n");
-        console.log("Song Name: "+song+"\n");
-        console.log("Song Preview: "+trkPreView+"\n");
-        console.log("Album: "+trkBalbum+"\n");
-        // append text to log.txt
-        // THIS has to be modified to work right ******* !!!!
-        var logSptfy = "========Begin Spotify Log=========" +
-        "\nArtist: "+artsNme+"\nTrack: "+song+"\nPreview-Link: "+trkPreView+"\nAlbum: "+trkBalbum+"\n====================";
-        // file system--APPEND_FILE
-        fs.appendFile("log.txt", logSptfy, function(err) {
-            if (err) throw err;
-        })
-        resultsEnd(data);
-    });
 }
-// bandsintown function
-function getVenues(artist) {
-    var artist = searchCMD;
-    var queryURL = "https://rest.bandsintown.com/artists/"+artist+"/events?app_id=codingbootcamp";
-    axios.get(queryURL).then(
-        function(responseBOTR) {
-            console.log("------------------");
-                var axBack = responseBOTR.data[0];
-                var vName = axBack.venue.name;
-                var vLoc = axBack.venue.city;
-                var eventDate = time(axBack.datetime).format("MM-DD-YYYY");
-            // venueName    
-            console.log("Venue Name: "+vName+"\r\n");
-            // venueLocation
-            console.log("Venue Location: "+vLoc+"\r\n");
-            // date of event @ venue
-            console.log("Scheduled for: "+eventDate+"\r\n");
 
-            //log.txt variable
-            var venLog = "=======BandsInTown-Log======"+"\nArtist Name: "+artist+"\nVenue Name: "+vName+"\nVenue Location: "+vLoc+"\r\n";
-            // fs appendFile
-            fs.appendFile("log.txt", venLog, function(err) {
-                if (err) throw err;
-            })
-            resultsEnd(responseBOTR);
-        }
-    )
-};
-// OMDB
-function getFlix(flic) {
-    if (!flic) {
-       var flic = "Mr. Nobody";
+
+// inquirer ADDIN
+// \put this INSIDE(inquirer)/
+/*
+inquire.prompt([{
+    type: 'input',
+    name: 'name',
+    message: "Welcome to LIRI\nWhat's your name?"
+}, 
+{
+    type: 'list',
+    name: "doWhatYouChoose",
+    message: "What do you want to do?",
+    choices: ["spotify-this-song", "movie-this", "concert-this"]
+}
+]).then(function(user) {
+    console.log('Hello '+user.name+' thanks for stopping by!');
+    switch (user) {
+        case user.doWhatYouChoose === "spotify-this-song":
+            action = 'spotify-this-song';
+            inquire.prompt([{
+                type: 'input',
+                name: 'songChoice',
+                message: "What song do you want to spotify?"
+            }
+          ]).then(function(lemmieGetTheAux) {
+              console.log(lemmieGetTheAux);
+              term = lemmieGetTheAux;
+              // liri
+              liriRun(action, term);
+          })
     }
-    var omdbURL = "http://www.ombdapi.com/?t="+flic+"&y=&plot=short&apikey=trilogy";
-    console.log(omdbURL);
-    axios.request(omdbURL).then(
-        function(omdbAxBk) {
-            console.log("------------------------");
-                var flicIsh = omdbAxBk.data;
-            console.log("Movie Title: "+flicIsh.Title+"\r\n");
-            console.log("Year Filmed: "+flicIsh.Year+"\r\n");
-            console.log("IMdB Rating: "+flicIsh.imdbRating+"\r\n");
-            console.log("Rotten Tomatoes: "+flicIsh.Ratings[1].Value+"\r\n");
-            console.log("Country of Origin: "+flicIsh.Country+"\r\n");
-            console.log("Language: "+flicIsh.Language+"\r\n");
-            console.log("Movie Plot: "+flicIsh.Plot+"\r\n");
-            console.log("Cast: "+flicIsh.Actors+"\r\n")
-            //reseultsEnd(omdbAxBk)
-            resultsEnd(omdbAxBk);
-            // log.txt
-            var omdbLog = "=====OMDB-INFO-LOG====="+"\nMovie: "+flicIsh.Title+"\nYear: "+flicIsh.Year+"\nIMdB: "+flicIsh.imdbRating+"\nPlot: "+flicIsh.Plot;
-            // fs appendFile
-            fs.appendFile("log.txt", omdbLog, function(err) {
-                if (err) throw err;
-            })
-        }
-    )
-};
-// utilize commands in 'random.txt'
-// function getRandom() >>> exe
-function getRandom() {
-    fs.readFile("random.txt","utf8", function(err,metaData) {
-        if (err) {
-            return console.log(err);
-        } else {
-            console.log(metaData);
-            var randomCmdData = metaData.split(",");
-            liriGO(randomCmdData[0], randomCmdData[1]);
-        }
-    })
-};
-// log results from other functions
-function resultsEnd(data) {
-    fs.appendFile("log.txt", data, function(err) {
-        if (err) throw err;
-    })
-};
-liriGO(liriCMD, searchCMD);
-   
+})
+*/
+/* tried putting inquirer in but theres too much overlap,
+ and I don't want to waste more time making this over involved 
+ but I still must work on this to see how intricite i can make this app be! */
+//==========================================================================
+
+liriRun(action, term);
